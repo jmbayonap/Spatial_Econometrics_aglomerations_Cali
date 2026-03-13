@@ -1,31 +1,20 @@
 ---
-title: "Taller 3 - Economías de aglomeración"
-format: 
-  pdf:
-       embed-resources: true
-engine: knitr
-editor: visual
-lang: es
-execute: 
-  echo: false
+title: "Taller 3 — Economías de Aglomeración"
+author: "JM"
+date: "2026-03-13"
+format:
+  html:
+    toc: true          # Tabla de contenidos flotante
+    toc-depth: 3       # Hasta subtítulos de tercer nivel
+    code-fold: true    # Los chunks se pueden colapsar — muy útil para un taller
+    theme: cosmo       # Tema visual limpio
+execute:
   warning: false
   message: false
+  echo: false
 ---
 
-```{=html}
-<style>
-  body {
-    text-align: justify
-  }
 
-caption{
-  color: black;
-  font-weight: bold;
-  font-size: 1.0em;
-  text-align: center
-}
-</style>
-```
 
 ```{r out.width="90%",include=FALSE}
 # ─── Librerías ────────────────────────────────────────────────────────────────
@@ -44,7 +33,7 @@ library(dbmss)        # Funciones Kd y M para aglomeración espacial continua
 
 # 1. Realice el mapa de densidad y distribución de puntos de las empresas del sector seleccionado. Interprete los resultados en términos de la localización de las mayores densidades. Indague sobre el contexto de esta industria en Cali para dar una explicación con sentido económico.
 
-```{r mapa_densidad_distribucion}
+```{r mapa_densidad_distribucion, include=FALSE}
 # ─── 1. Configuración del directorio de trabajo ───────────────────────────────
 setwd("C:/Users/jmbay/Documents/EAFIT/8 semestre/Econometría espacial/Economias de Aglomeracion")
 
@@ -89,6 +78,9 @@ points <- st_as_sf(data,
                    coords = c("x", "y"),
                    crs    = st_crs(crs))
 
+```
+
+```{r distribucion}
 # ─── 6. Mapa de distribución de puntos del sector ─────────────────────────────
 ggplot() +
   geom_sf(data = barriosCali,
@@ -108,6 +100,9 @@ ggplot() +
         legend.title     = element_text(size = 10),
         legend.spacing.y = unit(-0.3, "cm")) #+
   #canvas(3, 5, units = "in")
+```
+
+```{r densidad}
 
 # ─── 7. Mapa de densidad kernel bidimensional del sector ──────────────────────
 ggplot() +
@@ -145,11 +140,7 @@ ggplot() +
         legend.title     = element_text(size = 10),
         legend.spacing.y = unit(-0.3, "cm")) #+
   #canvas(3, 5, units = "in")
-
-# 7.1 Verificación del sector en la data filtrada
-#unique(data$ciiu_4)
 ```
-
 
 
 Los mapas de distribución espacial y densidad sugieren una concentración de empresas dedicadas a la fabricación de partes y piezas de carpintería para edificios y construcción en la zona norte-central de Cali. Esta aglomeración puede explicarse por la presencia de economías de aglomeración asociadas al sector de la construcción. Históricamente, el centro de la ciudad ha concentrado proveedores de insumos, ferreterías y comercios mayoristas de materiales de construcción, lo que facilita los encadenamientos productivos y reduce los costos logísticos de las empresas. Asimismo, al tratarse de insumos intermedios para este sector productivo, la localización central permite un acceso más directo a la demanda proveniente de proyectos de construcción y remodelación, generando beneficios de información asociados a la concentración de trabajadores especializados en un espacio próximo.
@@ -190,6 +181,8 @@ empresas_cali <- data_total |>
 participacion_sector_actividad <- (Total_empresas$tot_empresas /
                                    empresas_cali$total_empresas_cali) * 100
 
+cat(sprintf("Participación del sector: %.2f%%\n", participacion_sector_actividad))
+
 # ─── 5. Cálculo del IHH ───────────────────────────────────────────────────────
 # 5.1 Participación de cada barrio en el total del sector (s_i)
 empresas_barrio <- empresas_barrio |>
@@ -200,7 +193,7 @@ empresas_barrio |> slice_max(share, n = 4)
 
 # 5.3 IHH = suma de participaciones al cuadrado
 HHI <- sum(empresas_barrio$share^2)
-HHI
+cat("HHI:", round(HHI, 4), "\n")
 ```
 
 Como contexto del sector, existen un total de 198 empresas repartidas en los barrios de Cali dedicadas a la fabricación de partes y piezas de carpintería para construcción, representando apenas el 4.07% de la actividad económica de la ciudad. Los barrios con mayor participación del sector son Unión de Vda. Popular, San Nicolás, El Rodeo y El Troncal, concentrando cada uno aproximadamente el 6.5% de las empresas del sector.
@@ -233,7 +226,7 @@ $$\hat{\gamma}_{EG} \approx \frac{G_{EG}}{1-\sum_{i=1}^{N} x_i^2}$$
 
 ```{r EG}
 # ─── 1. Verificación del dataframe de barrios del sector ──────────────────────
-head(empresas_barrio)
+#head(empresas_barrio)
 
 # ─── 2. Empresas totales por barrio — solo barrios con presencia del sector ───
 total_barrio <- data_total |>
@@ -406,6 +399,12 @@ donde $d_{ij}$ es la distancia euclidiana entre los establecimientos $i$ y $j$, 
 -   **Aleatoriedad** si $\hat{K}_d(d)$ se encuentra dentro de las bandas
 
 ```{r Kd_Duranton_Overman}
+#| fig-width: 8
+#| fig-height: 5
+#| fig-align: center
+
+
+
 # ─── 1. Ventana espacial continua desde el shapefile ──────────────────────────
 window <- as.owin(st_union(barriosCali) |> st_transform(crs))
 
@@ -481,6 +480,7 @@ Kd_result <- dbmss::KdEnvelope(
 )
 
 # ─── 8. Visualización de K_d con información del ancho de banda ───────────────
+
 autoplot(Kd_result) +
   labs(
     title    = expression("Función " * hat(K)[d] * " — Duranton & Overman (2005)"),
@@ -518,6 +518,11 @@ donde $n_s$ es el número de establecimientos del sector y $n$ el total de estab
 -   $M(r) = 1$ — **aleatoriedad**: composición del vecindario indistinguible de la economía general
 
 ```{r M_Marcon_Puech}
+#| fig-width: 8
+#| fig-height: 5
+#| fig-align: center
+
+
 # ─── 1. Estimación de la función M con bandas de confianza ────────────────────
 # Reutiliza wmppp_all y r_seq construidos en el bloque anterior
 M_result <- dbmss::MEnvelope(
