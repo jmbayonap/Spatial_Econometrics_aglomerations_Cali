@@ -7,7 +7,7 @@ carpintería para edificios y construcción
 
 ## Estructura del repositorio
 
-- `taller_3_cited.qmd` — Documento principal con análisis y citas
+- `taller_3_revised.qmd` — Documento principal con análisis y citas
 - `data/datar.csv` — Base de empresas registradas en Cali
 - `data/BARRIOS.shp` — Shapefile de barrios (+ .dbf, .prj, .shx)
 
