@@ -8,7 +8,7 @@ carpintería para edificios y construcción
 ## Estructura del repositorio
 - `taller_3_revised.pdf` — Documento principal con análisis y citas
 - `taller_3_revised.qmd` — Archivo Quarto con el codigo replicable
-[Reporte](taller_3_revised.html) - Pagina web del documento
+- [Reporte](https://jmbayonap.github.io/Spatial_Econometrics_aglomerations_Cali/taller_3_revised.html) - Pagina web del documento
 - `data/datar.csv` — Base de empresas registradas en Cali
 - `data/BARRIOS.shp` — Shapefile de barrios (+ .dbf, .prj, .shx)
 
