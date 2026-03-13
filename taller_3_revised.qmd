@@ -35,10 +35,10 @@ library(dbmss)        # Funciones Kd y M para aglomeración espacial continua
 
 ```{r mapa_densidad_distribucion, include=FALSE}
 # ─── 1. Configuración del directorio de trabajo ───────────────────────────────
-setwd("C:/Users/jmbay/Documents/EAFIT/8 semestre/Econometría espacial/Economias de Aglomeracion")
+#setwd("C:/Users/jmbay/Documents/EAFIT/8 semestre/Econometría espacial/Economias de Aglomeracion")
 
 # ─── 2. Carga del shapefile de barrios de Cali ────────────────────────────────
-barriosCali <- st_read("BARRIOS.shp")   # Polígonos de barrios como objeto sf
+barriosCali <- st_read("data/BARRIOS.shp")   # Polígonos de barrios como objeto sf
 
 # 2.1 Extracción del sistema de coordenadas de referencia (CRS)
 crs <- st_crs(barriosCali)
@@ -50,7 +50,7 @@ crs <- st_crs(barriosCali)
   #canvas(3, 5, units = "in")
 
 # ─── 3. Carga de la base de datos de empresas ─────────────────────────────────
-data <- read.csv("datar.csv", header = TRUE, sep = ",", dec = ".")
+data <- read.csv("data/datar.csv", header = TRUE, sep = ",", dec = ".")
 
 # 3.1 Verificación de nombres de columnas disponibles
 #names(data)
@@ -65,7 +65,7 @@ data <- data |>
   filter(ciiu_4 == "2030")
 
 # ─── 4. Carga de la base general (todos los sectores) ─────────────────────────
-data_total <- read.csv("datar.csv", header = TRUE, sep = ",", dec = ".")
+data_total <- read.csv("data/datar.csv", header = TRUE, sep = ",", dec = ".")
 
 # 4.1 Conteo de empresas totales por barrio (cada observación = 1 empresa)
 data_tot_empresas <- data_total |>
@@ -574,5 +574,6 @@ Hirschman, A. O. (1945). *National power and the structure of foreign trade*. Un
 
 
 Marcon, E., y Puech, F. (2010). Measures of the geographic concentration of industries: Improving distance-based methods. *Journal of Economic Geography*, *10*(5), 745–762. https://doi.org/10.1093/jeg/lbp056
+
 
 Maurel, F., y Sédillot, B. (1999). A measure of the geographic concentration in French manufacturing industries. *Regional Science and Urban Economics*, *29*(5), 575–604. https://doi.org/10.1016/S0166-0462(99)00020-4
