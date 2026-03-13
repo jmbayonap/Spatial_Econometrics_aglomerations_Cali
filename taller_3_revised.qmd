@@ -1,19 +1,21 @@
 ---
 title: "Taller 3 — Economías de Aglomeración"
-author: "JM"
+author: "Juan Manuel Bayona Pacheco"
 date: "2026-03-13"
 format:
   html:
+    embed-resources: true
     toc: true          # Tabla de contenidos flotante
     toc-depth: 3       # Hasta subtítulos de tercer nivel
     code-fold: true    # Los chunks se pueden colapsar — muy útil para un taller
     theme: cosmo       # Tema visual limpio
 execute:
+  echo: false
   warning: false
   message: false
-  echo: false
+  fig-width: 4       # ← tamaño global para todos los gráficos
+  fig-height: 6
 ---
-
 
 
 ```{r out.width="90%",include=FALSE}
@@ -31,14 +33,23 @@ library(dbmss)        # Funciones Kd y M para aglomeración espacial continua
 
 ## Taller 3 de Econometría Espacial
 
-# 1. Realice el mapa de densidad y distribución de puntos de las empresas del sector seleccionado. Interprete los resultados en términos de la localización de las mayores densidades. Indague sobre el contexto de esta industria en Cali para dar una explicación con sentido económico.
+# 1. Mapa de densidad y distribución de empresas del sector insumos intermedios de construcción
+
+<small>
+Realice el mapa de densidad y distribución de puntos de las empresas del sector seleccionado. Interprete los resultados en términos de la localización de las mayores densidades.Indague sobre el contexto de esta industria en Cali para dar una explicación con sentido económico.
+</small>
 
 ```{r mapa_densidad_distribucion, include=FALSE}
 # ─── 1. Configuración del directorio de trabajo ───────────────────────────────
-#setwd("C:/Users/jmbay/Documents/EAFIT/8 semestre/Econometría espacial/Economias de Aglomeracion")
+setwd("C:/Users/jmbay/Documents/EAFIT/8 semestre/Econometría espacial/Economias de Aglomeracion")
+
+# ─── 1.1 rename_empleo. ───────────────────────────────
+datar <- read.csv("datar.csv", header = TRUE, sep = ",", dec = ".") |>
+  rename(empleo = "ue026a1_nu")
+
 
 # ─── 2. Carga del shapefile de barrios de Cali ────────────────────────────────
-barriosCali <- st_read("data/BARRIOS.shp")   # Polígonos de barrios como objeto sf
+barriosCali <- st_read("BARRIOS.shp")   # Polígonos de barrios como objeto sf
 
 # 2.1 Extracción del sistema de coordenadas de referencia (CRS)
 crs <- st_crs(barriosCali)
@@ -50,8 +61,7 @@ crs <- st_crs(barriosCali)
   #canvas(3, 5, units = "in")
 
 # ─── 3. Carga de la base de datos de empresas ─────────────────────────────────
-data <- read.csv("data/datar.csv", header = TRUE, sep = ",", dec = ".")
-
+data <- datar 
 # 3.1 Verificación de nombres de columnas disponibles
 #names(data)
 
@@ -65,14 +75,7 @@ data <- data |>
   filter(ciiu_4 == "2030")
 
 # ─── 4. Carga de la base general (todos los sectores) ─────────────────────────
-data_total <- read.csv("data/datar.csv", header = TRUE, sep = ",", dec = ".")
-
-# 4.1 Conteo de empresas totales por barrio (cada observación = 1 empresa)
-data_tot_empresas <- data_total |>
-  mutate(n = 1) |>
-  group_by(barrio) |>
-  summarise(empresas_totales_barrio = sum(n))
-
+data_total <- datar
 # ─── 5. Conversión de empresas del sector a puntos geográficos ────────────────
 points <- st_as_sf(data,
                    coords = c("x", "y"),
@@ -80,7 +83,9 @@ points <- st_as_sf(data,
 
 ```
 
-```{r distribucion}
+
+### a) Distribución espacial
+```{r distribucion, echo=TRUE}
 # ─── 6. Mapa de distribución de puntos del sector ─────────────────────────────
 ggplot() +
   geom_sf(data = barriosCali,
@@ -94,15 +99,17 @@ ggplot() +
                       keyheight    = unit(0.3, "cm"),
                       override.aes = list(alpha = 0.1),
                       label.theme  = element_text(size = 6))) +
-  geom_sf(data = points, color = "red", size = 0.20, alpha = 1) +
+  geom_sf(data = points, color = "red", size = 0.30, alpha = 2) +
   theme_void() +
   theme(legend.position  = c(0.2, 0.2),
         legend.title     = element_text(size = 10),
-        legend.spacing.y = unit(-0.3, "cm")) #+
-  #canvas(3, 5, units = "in")
+        legend.spacing.y = unit(-0.3, "cm")) 
 ```
 
-```{r densidad}
+
+
+### a) Funcion de densidad espacial
+```{r densidad, echo=TRUE}
 
 # ─── 7. Mapa de densidad kernel bidimensional del sector ──────────────────────
 ggplot() +
@@ -138,71 +145,81 @@ ggplot() +
   theme_void() +
   theme(legend.position  = c(0.2, 0.2),
         legend.title     = element_text(size = 10),
-        legend.spacing.y = unit(-0.3, "cm")) #+
-  #canvas(3, 5, units = "in")
+        legend.spacing.y = unit(-0.3, "cm"))
 ```
 
 
 Los mapas de distribución espacial y densidad sugieren una concentración de empresas dedicadas a la fabricación de partes y piezas de carpintería para edificios y construcción en la zona norte-central de Cali. Esta aglomeración puede explicarse por la presencia de economías de aglomeración asociadas al sector de la construcción. Históricamente, el centro de la ciudad ha concentrado proveedores de insumos, ferreterías y comercios mayoristas de materiales de construcción, lo que facilita los encadenamientos productivos y reduce los costos logísticos de las empresas. Asimismo, al tratarse de insumos intermedios para este sector productivo, la localización central permite un acceso más directo a la demanda proveniente de proyectos de construcción y remodelación, generando beneficios de información asociados a la concentración de trabajadores especializados en un espacio próximo.
 
-# 2. Calcule los siguientes índices de concentración e interprételos con sentido económico dado el contexto de la ciudad.
+# 2. Índices de concentración espacial
 
-### a) Índice de Herfindahl-Hirschman (IHH)
+<small>
+Calcule los siguientes índices de concentración e interprételos con sentido económico, teniendo en cuenta el contexto de la ciudad.
+</small>
+
+### a) Índice de Herfindahl–Hirschman (IHH)
+
 
 El **Índice de Herfindahl-Hirschman (IHH)** mide el grado de concentración de una actividad económica en un conjunto de unidades geográficas(Herfindahl, 1950; Hirschman, 1945). En este contexto, permite evaluar qué tan concentradas están las empresas del sector en los distintos barrios de Cali. Matemáticamente se define como:
 
 $$HHI = \sum_{i=1}^{N} s_i^2$$
 
-donde $s_i$ es la participación del barrio $i$ en el total de empresas del sector, y $N$ es el número de barrios con al menos una empresa del sector.
+donde $s_i$ es la participación en empleo del barrio $i$ en el total de empleo del sector, y $N$ es el número de barrios con al menos una empresa del sector.
 
 ```{r IHH}
 # ─── 1. Intersección espacial: asignar cada empresa del sector a su barrio ────
-empresas_sector_barrio <- st_join(points, barriosCali)
+empresas_barrio_sector <- st_join(points, barriosCali)
 
 # 1.1 Verificación del sector en el objeto espacial
 #unique(empresas_sector_barrio$ciiu_4)
 
-# ─── 2. Conteo de empresas del sector por barrio ──────────────────────────────
-empresas_barrio <- empresas_sector_barrio |>
+# ─── 2. Conteo de empleo del sector por barrio ──────────────────────────────
+empleo_barrio_sector <- empresas_barrio_sector |>
   st_drop_geometry() |>        # Elimina geometría para operar como tabla
   group_by(barrio) |>
-  summarise(empresas = n())    # n() cuenta observaciones por grupo
+  summarise(empleo = sum(empleo))  #empleo por barrio.
 
-# ─── 3. Total de empresas del sector en Cali ──────────────────────────────────
-Total_empresas <- empresas_barrio |>
-  summarise(tot_empresas = sum(empresas))
+# ─── 3. Total de empleo del sector en Cali ──────────────────────────────────
+Total_empleo_sector <- empleo_barrio_sector |>
+  summarise(tot_empleo_sector = sum(empleo))
+cat("Numero de puestos de trabajo en el sector de insumos intermedios en construcción:", round(Total_empleo_sector$tot_empleo_sector, 4), "\n")
 
-# ─── 4. Total de empresas de la economía general en Cali ──────────────────────
-empresas_cali <- data_total |>
-  mutate(n = 1) |>
-  summarise(total_empresas_cali = sum(n))
 
-# 4.1 Participación del sector en la economía general (%)
-participacion_sector_actividad <- (Total_empresas$tot_empresas /
-                                   empresas_cali$total_empresas_cali) * 100
+# ─── 4. Total de empleo de la economía general en Cali ──────────────────────
+empleo_cali <- data_total |>
+  summarise(total_empleo_cali = sum(empleo))
 
-cat(sprintf("Participación del sector: %.2f%%\n", participacion_sector_actividad))
+cat("Numero de puestos de trabajo en la economia caleña:", round(empleo_cali$total_empleo_cali, 4), "\n")
+
+# 4.1 Participación del empleo del sector en el empleo de la economía general (%)
+empleo_sector_actividad <- (Total_empleo_sector$tot_empleo_sector /
+                                   empleo_cali$total_empleo_cali) * 100
+
+cat(sprintf("Participación del sector en terminos de empleo: %.2f%%\n", empleo_sector_actividad))
 
 # ─── 5. Cálculo del IHH ───────────────────────────────────────────────────────
-# 5.1 Participación de cada barrio en el total del sector (s_i)
-empresas_barrio <- empresas_barrio |>
-  mutate(share = empresas / sum(empresas))
+# 5.1 Participación del empleo en cada barrio en el total del sector (s_i) 
+empleo_barrio_sector <- empleo_barrio_sector |>
+  mutate(share = empleo / sum(empleo))
 
 # 5.2 Top 4 barrios por participación sectorial
-empresas_barrio |> slice_max(share, n = 4)
+empleo_barrio_sector |> slice_max(share, n = 5)
 
-# 5.3 IHH = suma de participaciones al cuadrado
-HHI <- sum(empresas_barrio$share^2)
-cat("HHI:", round(HHI, 4), "\n")
+
+# 5.3 IHH = suma de participaciones del empleo por barrio al cuadrado
+HHI <- sum(empleo_barrio_sector$share^2)
+cat("HHI por numero de empleo en los barrios de Cali:", round(HHI, 4), "\n")
+
+
 ```
 
-Como contexto del sector, existen un total de 198 empresas repartidas en los barrios de Cali dedicadas a la fabricación de partes y piezas de carpintería para construcción, representando apenas el 4.07% de la actividad económica de la ciudad. Los barrios con mayor participación del sector son Unión de Vda. Popular, San Nicolás, El Rodeo y El Troncal, concentrando cada uno aproximadamente el 6.5% de las empresas del sector.
+Como contexto del sector, existen un total de 585 puestos de trabajo en empresas repartidas en los barrios de Cali dedicadas a la fabricación de partes y piezas de carpintería para construcción, representando apenas el 1.44% de la actividad económica de la ciudad. Los barrios con mayor empleabilidad del sector son Unión de Vda. Popular, San Nicolás, San Pascual, UNION DE VDA. POPULAR y El Troncal, concentrando cada uno aproximadamente del 10% al 5% del empleo del sector.
 
-El IHH sugiere que la actividad se encuentra distribuida entre varios barrios y no concentrada en uno o pocos de ellos. Este resultado contrasta con la concentración visual observada en el mapa de densidad, lo que puede atribuirse a dos sesgos estructurales del estimador: primero, el **sesgo de tamaño y aglomeración**, donde la concentración de toda la economía en un barrio puede inflar la participación del sector sin que ello refleje especialización sectorial propia; segundo, el **sesgo de unidad espacial** (*MAUP*), dado que el IHH trata cada barrio como una unidad independiente sin considerar la dependencia espacial entre barrios contiguos. Los índices siguientes buscan corregir cada uno de estos sesgos progresivamente.
+El IHH sugiere que la actividad se encuentra distribuida entre varios barrios y no concentrada en uno o pocos de ellos. Este resultado contrasta con la concentración visual observada en el mapa de densidad, lo que puede atribuirse a dos sesgos estructurales del estimador: primero, el **sesgo de tamaño y aglomeración**, donde la concentración de toda la economía en un barrio puede inflar la participación del sector sin que ello refleje especialización sectorial propia, o viceversa, la baja cantidad de empleo relativo al tamaño de la empleabilidad del sector, podria reflejar no especialización cuando realmente si lo hay en barrios especificos; segundo, el **sesgo de unidad espacial** (*MAUP*), dado que el IHH trata cada barrio como una unidad independiente sin considerar la dependencia espacial entre barrios contiguos. Los índices siguientes buscan corregir cada uno de estos sesgos progresivamente.
 
 ### b) Índice de Ellison y Glaeser (1997)
 
-El **Índice de Ellison y Glaeser (EG)** mide el grado de aglomeración espacial de una industria corrigiendo dos sesgos del IHH: (1) la concentración general de la actividad económica en la ciudad, y (2) el tamaño relativo de las empresas dentro del sector (Ellison y Glaeser, 1997). El índice se define como:
+El **Índice de Ellison y Glaeser (EG)** mide el grado de aglomeración espacial de una industria corrigiendo dos sesgos del IHH: (1) la concentración del empleo general de la actividad económica en la ciudad, y (2) la participacion relativa de las empresas al empleo dentro del sector (Ellison y Glaeser, 1997). El índice se define como:
 
 $$\hat{\gamma}_{EG} = \frac{G_{EG}}{(1-\sum_{i=1}^{N} x_i^2)(1-H)} - \frac{H}{1-H}$$
 
@@ -210,54 +227,58 @@ donde:
 
 $$G_{EG} = \sum_{i=1}^{N}(s_i - x_i)^2 \qquad H = \sum_{j=1}^{J} z_j^2$$
 
--   $s_i$ = participación del sector en el barrio $i$
--   $x_i$ = participación de todas las empresas de la ciudad en el barrio $i$
--   $H$ = índice de Herfindahl de tamaños de plantas dentro del sector
+-   $s_i$ = participación del empleo del sector en el barrio $i$
+-   $x_i$ = participación del empleo de todas las empresas de la ciudad en el barrio $i$
+-   $H$ = índice de Herfindahl del tamaño de las plantas dentro del sector en el sentido del empleo
 -   $J$ = número total de empresas del sector
 -   $z_j$ = participación del empleo de la empresa $j$ en el empleo total del sector
 
-Dado que no se dispone de información sobre el tamaño de las empresas, se asume distribución uniforme: $z_j = 1/J$ para toda $j$, lo que implica:
+$$\hat{\gamma}_{EG} \propto \frac{G_{EG}}{1-\sum_{i=1}^{N} x_i^2}$$
 
-$$H = \sum_{j=1}^{J} \left(\frac{1}{J}\right)^2 = \frac{1}{J}$$
+los autores proponen los siguientes umbrales de interpretación.
 
-Para $J$ suficientemente grande ($J \gg 1$), $H \approx 0$ y el índice se simplifica a:
-
-$$\hat{\gamma}_{EG} \approx \frac{G_{EG}}{1-\sum_{i=1}^{N} x_i^2}$$
+| $\hat{\gamma}_{EG}$ | Interpretación |
+|---|---|
+| $\hat{\gamma}_{EG} < 0.02$ | Poca o ninguna aglomeración |
+| $0.02 \leq \hat{\gamma}_{EG} \leq 0.05$ | Aglomeración moderada |
+| $\hat{\gamma}_{EG} > 0.05$ | Alta aglomeración |
 
 ```{r EG}
 # ─── 1. Verificación del dataframe de barrios del sector ──────────────────────
 #head(empresas_barrio)
 
-# ─── 2. Empresas totales por barrio — solo barrios con presencia del sector ───
+# ─── 2. Empleo total(sin condicionar) por barrio — solo barrios con presencia del sector ───
 total_barrio <- data_total |>
-  filter(cod_barrio %in% empresas_sector_barrio$cod_barrio) |>  # Barrios con sector
+  filter(barrio %in% empleo_barrio_sector$barrio) |>  # Barrios con sector
   st_drop_geometry() |>
   group_by(barrio) |>
-  summarise(total_empresas = n())
+  summarise(empleo_total_barrio = sum(empleo))
 
 # 2.1 Participación de la economía general en cada barrio (x_i)
 total_barrio <- total_barrio |>
-  mutate(xi = total_empresas / sum(total_empresas))
+  mutate(xi = empleo_total_barrio / sum(empleo_total_barrio))
 
-# ─── 3. Total de empresas en barrios con presencia del sector ─────────────────
-total_empresas_barriosMC <- total_barrio |>
-  summarise(empresas_barrios = sum(total_empresas))
+# ─── 3. Total de empleo en barrios con presencia del sector(PS) ─────────────────
+total_empleo_barriosPS <- total_barrio |>
+  summarise(empleo_total_barrios = sum(empleo_total_barrio))
 
-# 3.1 Participación del sector en el conjunto de barrios con presencia sectorial
-participacion_sector_actividadB <- Total_empresas$tot_empresas /
-                                   total_empresas_barriosMC$empresas_barrios
+# 3.1 Participación del empleo del sector en el conjunto de barrios con presencia sectorial
+empleo_sector_actividad_barriosPS <- (Total_empleo_sector$tot_empleo_sector /total_empleo_barriosPS$empleo_total_barrios) *100
+cat(sprintf("ratio entre empleo del sector y el empleo general en barrios con al menos 1 empresa del sector construcción: %.2f%%\n", empleo_sector_actividad_barriosPS))
 
 # ─── 4. Construcción del dataframe unificado para el índice ───────────────────
 # Une participación del sector (s_i) con participación de la economía (x_i)
-df <- left_join(empresas_barrio, total_barrio, by = "barrio") |>
+df <- left_join(empleo_barrio_sector, total_barrio, by = "barrio") |>
   rename(si = "share")
 
 # ─── 5. Cálculo de componentes del índice EG ──────────────────────────────────
 # 5.1 G_EG: distancia L² entre distribución del sector y de la economía
 G <- sum((df$si - df$xi)^2)
 
-# 5.2 H: índice de Herfindahl bajo tamaño uniforme (H = 1/J)
-H <- 1 / Total_empresas$tot_empresas
+# 5.2 H: índice de Herfindahl participacion del empleo de cada empresa del sector Construcción
+
+
+H <- sum(((data$empleo) / (Total_empleo_sector$tot_empleo_sector))^2)
 
 # 5.3 Denominador: (1 - sum(x_i^2)) — Gini-Simpson de la economía de referencia
 sumxi <- 1 - sum(df$xi^2)
@@ -267,7 +288,7 @@ gamma_EG <- (G / (sumxi * (1 - H))) - (H / (1 - H))
 #gamma_EG
 
 # ─── 7. Significancia estadística (EG 1997, pie de página 13) ─────────────────
-n_f      <- Total_empresas$tot_empresas       # Número de empresas del sector
+n_f <- nrow(data)      # Número de empresas del sector
 sum_xi2  <- sum(df$xi^2)                      # Suma de x_i^2
 
 # 7.1 Varianza asintótica del estimador bajo H0
@@ -283,7 +304,8 @@ cat("z-stat:  ", round(z_stat,   4), "\n")
 cat("p-value: ", round(p_value,  4), "\n")
 ```
 
-El índice EG corrige el sesgo de concentración total de la economía presente en el IHH. En Cali, los barrios donde existe al menos una empresa del sector poseen alrededor de 2.819 empresas en total, de las cuales el sector de insumos intermedios para construcción representa el $7\%$ de la actividad económica dentro de esos barrios específicos. El p-value obtenido (0.53) es considerablemente mayor que los niveles de significancia convencionales ( $1\%$ , $5\%$, y $10\%$ ), por lo que no se rechaza la hipótesis nula de ausencia de aglomeración espacial. Esto sugiere que la distribución de co-localización del sector en Cali no es estadísticamente diferente de una distribución aleatoria condicionada a la distribución general de la actividad económica. El estadístico $\hat{\gamma}_{EG} = 0.005$ confirma la ausencia de especialización sectorial en barrios específicos más allá de la especialización que impone la economía general en esas áreas.
+El índice EG corrige el sesgo de concentración total de la economía presente en el IHH. En Cali, cuando condicionamos a los barrios donde existe al menos una empresa del sector, la participación del empleo se duplica, pasando de $1.4\%$ a $3.11\%$, esto indica, que el sector agrega un puesto de trabajo adicional en los barrios donde se ubica, sugiriendo alta aglomeración relativa a la empleabilidad general de la economía. Precisamente, el estadistico $\hat{\gamma}_{EG} = 0.06$ muestra signos de alta aglomeración según el umbral que proponen los autores, mayores a la economía, con p-value de 0.0566, que indica la baja probabilidad de encontrar casos extremos de aglomeración más alla del observado por el sector, la hipotesis nula al $10\%$ es rechazada, pero no puede ser rechazada para los niveles de significanciaa del $5\%$ al $1\%$, aunque hay una leve inclinación de aglomeración en barrios especificos condicional a la economía misma, la evidencia obtenida no es concluyente.  
+ 
 
 ### c) Índice de Maurel y Sédillot (1999)
 
@@ -295,7 +317,7 @@ donde:
 
 $$G_{MS} = \sum_i (s_i^2 - x_i^2)$$
 
-La hipótesis nula de ambos estimadores es la misma: la distribución intrasectorial es indistinguible de la distribución multisectorial a lo largo de Cali.
+La hipótesis nula de ambos estimadores es la misma: la distribución intrasectorial es indistinguible de la distribución multisectorial a lo largo de Cali. La diferencia es como definen esas distribuciónes.
 
 ```{r IMS}
 # ─── 1. Cálculo de G_MS ───────────────────────────────────────────────────────
@@ -310,21 +332,23 @@ gamma_MS <- (G_MS / (sumxi * (1 - H))) - (H / (1 - H))
 cat("gamma_MS:", round(gamma_MS, 4), "\n")
 ```
 
-$\hat{\gamma}_{MS} = -0.021$ ofrece una visión más conservadora de la aglomeración sectorial. El signo negativo — frente al valor positivo de $\hat{\gamma}_{EG}$ — se explica por la diferente definición de $G$: MS descarta el término cruzado $2\sum_i s_i x_i$ que EG incluye, de modo que cuando el sector está subrepresentado en los barrios de mayor peso económico (como San Nicolás, con $x_i = 0.1447$ y $LQ = 0.38$), $G_{MS}$ resulta menor que $G_{EG}$, generando una estimación de $\gamma$ más baja e incluso negativa. En conjunto, ambos estimadores confirman la misma conclusión: las decisiones de co-localización de las empresas de insumos intermedios para construcción en Cali no obedecen a un proceso de clusterización en barrios específicos, sino que siguen la distribución multisectorial de la actividad económica a lo largo de la ciudad.
+$\hat{\gamma}_{MS} = -0.1223$ ofrece una visión más conservadora de la aglomeración sectorial. El signo negativo es explicado por una menor aglomeración del sector referente a la aglomeración de la economía, esto puede ser explicado por Barrios tradicionalmente comerciales como San Nicolas que abarcan un gran numero de empleos de la economía caleña en distintos sectores, disminuyendo la probabilidad relativa de co-localizacion de dos trabajadores en el sector, en consecuencia, el indice pronostica una subrepresentación del sector en promedio sobre todos los  barrios analizados.
+
+La diferencia— frente al valor positivo de $\hat{\gamma}_{EG}$ — se explica por la diferente definición de $G$: MMS descarta el término cruzado $2\sum_i s_i x_i$ que EG incluye, de modo que cuando el sector está subrepresentado en los barrios de mayor peso económico, $G_{MS}$ resulta menor que $G_{EG}$, generando una estimación de $\gamma$ más baja e incluso negativa. En conjunto, ambos estimadores confirman la distintas hipotesis: las decisiones de co-localización de las empresas de insumos intermedios para construcción en Cali obedecen cierto proceso de clusterización en barrios específicos, sin embargo, la distribucion de probabilidad de co-localización en empresas distintas del sector parece seguir la distribución de trabajar en cualquier empresa sectorialmente distinta.
 
 ### d) Cociente de Localización (LQ) e Índice de Aislamiento (IQ)
 
-El **Cociente de Localización** (LQ) mide cuántas empresas del sector existen por empresa de la economía general en el barrio $i$, relativo al promedio de Cali :
+El **Cociente de Localización** (LQ) mide cuántas empleo del sector existen por empleo de la economía general en el barrio $i$, formalmente:
 
 $$LQ_i = \frac{s_i}{x_i} = \frac{e_{si}/E_s}{e_i/E}$$
 
-donde $e_{si}$ es el número de empresas del sector en el barrio $i$, $E_s$ el total del sector en Cali, $e_i$ el total de empresas en el barrio $i$, y $E$ el total de la economía. Un $LQ_i > 1$ indica especialización relativa del barrio en el sector; $LQ_i < 1$ señala subrepresentación.
+donde $e_{si}$ es el número de empleos del sector en el barrio $i$, $E_s$ es el total de empleos en el sector, $e_i$ el total de empleos multisectoriales en el barrio $i$, y $E$ el total de empleos en la economía. Un $LQ_i > 1$ indica especialización relativa del barrio en el sector; $LQ_i < 1$ señala subrepresentación.
 
-El **Índice de Aislamiento** (IQ) pondera el LQ por la participación del sector $s_i$, produciendo el LQ promedio que enfrenta una empresa típica del sector dado su barrio de localización:
+El **Índice de Aislamiento** (IQ) pondera el LQ por la empleabilidad del sector en el barrio i $s_i$, produciendo el LQ promedio que enfrenta un trabajador tipico del sector dado su barrio de localización:
 
 $$IQ = \sum_i s_i \cdot LQ_i = \sum_i \frac{s_i^2}{x_i}$$
 
-Un $IQ > 1$ indica que, en promedio, las empresas del sector se localizan en barrios con mayor especialización sectorial que la media de Cali.
+Un $IQ > 1$ indica que, en promedio, el empleo del sector se localizan en barrios con mayor empleabilidad sectorial que la media de Cali.
 
 ```{r LQ_IQ}
 # ─── 1. Cálculo del LQ por barrio ─────────────────────────────────────────────
@@ -338,7 +362,7 @@ df <- df |>
 df |>
   filter(!is.na(LQ)) |>
   slice_max(LQ, n = 10) |>
-  select(barrio, empresas, total_empresas, si, xi, LQ)
+  select(barrio, empleo, empleo_total_barrio, si, xi, LQ)
 
 # ─── 3. Índice de Aislamiento (IQ) ────────────────────────────────────────────
 IQ <- sum(df$si^2 / df$xi, na.rm = TRUE)
@@ -349,14 +373,23 @@ cat("IQ (Índice de Aislamiento):", round(IQ, 4), "\n")
 df |>
   filter(!is.na(LQ)) |>
   slice_max(si, n = 10) |>
-  select(barrio, empresas, total_empresas, si, xi, LQ)
+  select(barrio, empleo, empleo_total_barrio, si, xi, LQ)
+
+
+
 ```
 
-Los resultados muestran que los barrios con mayor $LQ$ son **El Mortinal** ($s_i = 0.0050$, $x_i = 0.00035$, $LQ = 14.23$), **El Prado** ($s_i = 0.0101$, $x_i = 0.00142$, $LQ = 7.12$) y **Sector Los Mangos-Canaverejo Norte** ($s_i = 0.0050$, $x_i = 0.00071$, $LQ = 7.12$), valores que a primera vista sugerirían una especialización sectorial extrema. Sin embargo, estos resultados obedecen a una limitación estructural del índice: cuando la masa económica de referencia $x_i$ es pequeña, cualquier empresa del sector infla mecánicamente el cociente sin reflejar una decisión de aglomeración económicamente significativa. El caso límite es **El Mortinal**, donde una única empresa constructora representa la totalidad de la actividad económica del barrio, generando un $LQ = 14.23$ que constituye un artefacto muestral sin validez estadística. El mismo fenómeno opera en **El Prado** con apenas dos empresas del sector y en **Sector Los Mangos-Canaverejo Norte** con una sola observación — barrios donde la escasez de masa económica hace que el denominador $x_i$ sea suficientemente pequeño como para producir valores extremos.
+Los resultados muestran que los barrios con mayor $LQ$ son **El Mortinal** ($s_i = 0.0030$, $x_i = 0.0001$, $LQ = 32.14$), **Rodrigo Lara Bonilla** ($s_i = 0.0188$, $x_i = 0.00122$, $LQ = 15.37$) y **Jose M. Cordoba** ($s_i = 0.0136$, $x_i = 0.00121$, $LQ = 13.53$), valores que a primera vista sugerirían una especialización sectorial extrema. Sin embargo, estos resultados obedecen a una limitación estructural del índice: cuando la masa económica de referencia $x_i$ es pequeña, cualquier empresa del sector infla mecánicamente el cociente sin reflejar una decisión de aglomeración económicamente significativa. El caso límite es **El Mortinal**, donde una única empresa constructora representa la totalidad de la actividad económica del barrio, generando un $LQ = 32.14$ que constituye un artefacto muestral sin validez estadística. El mismo fenómeno opera en los demás barrios mencionados — barrios donde la escasez de masa económica hace que el denominador $x_i$ sea suficientemente pequeño como para producir valores extremos.
 
-Para corregir esta limitación, el $IQ = \sum_i s_i^2/x_i$ pondera el $LQ$ por la participación del sector $s_i$, produciendo el número promedio de empresas del sector que enfrenta una empresa del sector por cada empresa de la economía general en su barrio de localización — es decir, cuántas veces más densa es la presencia sectorial en el vecindario típico de una empresa del sector respecto al vecindario típico de cualquier empresa de la economía. Un valor $IQ = 1.88$ indica que las empresas del sector tienden a localizarse en barrios donde la densidad sectorial es casi el doble del promedio de la ciudad. Los barrios analíticamente relevantes — aquellos que combinan $s_i$ suficiente con especialización genuina — son tres. **El Rodeo** presenta la mayor especialización relativa con soporte muestral razonable: $9$ empresas del sector sobre $32$ totales ($s_i = 0.0455$, $x_i = 0.0114$, $LQ = 4.00$), lo que indica que encontrar una empresa del sector en ese barrio es cuatro veces más probable que en un barrio promedio de Cali. **Unión de Vda. Popular** concentra el mayor peso sectorial absoluto con $13$ empresas ($s_i = 0.0657$, $x_i = 0.0199$, $LQ = 3.31$), sugiriendo especialización genuina respaldada por masa muestral. **San Nicolás**, en contraste, siendo el corredor comercial más importante de Cali al abarcar el $14.47\%$ de toda la actividad empresarial de la ciudad ($x_i = 0.1447$, $11$ empresas del sector), presenta un $LQ = 0.38$, resultado consistente con una economía suficientemente diversificada donde ningún sector logra sobre-representarse — su peso en el $IQ$ es alto por $s_i$, pero su $LQ < 1$ lo excluye como polo de especialización constructora.
+Para corregir esta limitación, el $IQ = \sum_i s_i^2/x_i$ pondera el $LQ$ por la participación del sector $s_i$, produciendo las odds-probabilities de co-localizacion de dos trabajadores en el sector respecto a co-localizacion de dos trabajadores en cualquier sector— es decir, mide las probabilidades relativas en promedio para todo cali que enfrentan dos individuos para posicionarse en un mismo barrio en un mismo sector. Un valor $IQ = 3.68$ indica que el empleo sector tienden a localizarse en barrios donde la densidad sectorial es el triple del promedio de la ciudad. Los barrios analíticamente relevantes — aquellos que combinan $s_i$ suficiente con especialización genuina — son tres. **El rodeo** presenta la mayor especialización relativa con soporte muestral razonable:el $33\%$ de los empleos proviene del sector analizado($e_s = 30$,$e = 89$) ($LQ = 10.83$), lo que indica que encontrar trabajo en el sector de construcción en el rodeo es aproximadamente 10 veces más probable que el empleo en cualquier otro sector economico, coherente con un proceso de especialización especifico en ese barrio.En la misma linea, **San Pascual** concentra alrebedor de $43$ puestos de empleos representando cerca del $7.35\%$ de los empleos del sector. Posee unas odds de $LQ = 5.08$, sugiriendo que las probabilidades de conseguir empleo en el sector son 5 veces mayor respecto a los distintos sectores, mostrando robustez por especialización genuina respaldada por masa muestral. En el sentido opuesto, **San Nicolás**, siendo el corredor comercial más importante de Cali al abarcar el $33.49\%$ de toda la actividad empresarial en los barrios seleccionados, presenta un $LQ = 0.3164$, resultado consistente con una economía suficientemente diversificada donde ningún sector logra sobre-representarse — su peso en el $IQ$ es alto por $s_i$, pero su $LQ < 1$ lo excluye como polo de especialización constructora. 
 
-# 3. Haga el mapa del LQ e interprete.
+# 3. Mapa del coeficiente de localización (LQ)
+
+<small>
+Construya el mapa del coeficiente de localización (Location Quotient, LQ) 
+para el sector analizado e interprete los resultados en términos de especialización
+productiva de los barrios de la ciudad.
+</small>
 
 ```{r mapa_LQ}
 # ─── 1. Unión del LQ al shapefile de barrios ──────────────────────────────────
@@ -376,16 +409,17 @@ ggplot(lq_map) +
        subtitle = "Sector CIIU 2030 — Cali",
        caption  = "Fuente: DANE, Censo Económico 2005") +
   theme_void() +
-  theme(legend.position = c(0.2, 0.3)) #+
-  #canvas(3, 5, units = "in")
+  theme(legend.position = c(0.2, 0.3)) 
 ```
 
 El mapa cartográfico del LQ revela tres patrones diferenciables. En el área urbana consolidada predominan polígonos de azul oscuro correspondientes a $LQ≈1$ indicando que el sector sigue la densidad económica general sin generar especialización propia — resultado coherente con el signo negativo de $\hat{\gamma}_{MS}$. En la franja central-norte y periferia oriental emergen nodos de especialización moderada-alta ($2≤LQ≤5$), coincidentes con corredores de expansión urbana donde la demanda endógena por insumos de construcción es estructuralmente mayor. Los polígonos amarillo-naranja dispersos en la periferia corresponden con alta probabilidad a los casos de LQ artefactual ya discutidos.
 
 Los índices anteriores comparten una limitación común: operan sobre particiones discretas del espacio en barrios, lo que introduce dependencia de los resultados respecto a cómo se definen las fronteras geográficas (*MAUP*). Las funciones $\hat{K}_d$ y $M$ resuelven este problema estimando aglomeración sobre el espacio continuo, evaluando directamente las distancias entre establecimientos.
 
-# 4. Estime las funciones $\hat{K}_d$ de Duranton y Overman (2005) y $M$ de Marcon y Puech (2010). Interprete los resultados en términos de la localización de las mayores densidades y de la distancia a la que se encuentran las empresas.
-
+# 4. funciones de densidad de distancia $\hat{K}_d$ de Duranton y Overman (2005) y $M$ de Marcon y Puech (2010).
+<small>
+Interprete los resultados en términos de la localización de las mayores densidades y de la distancia a la que se encuentran las empresas.
+<small>
 ### a) Función $\hat{K}_d$ de Duranton y Overman (2005)
 
 La función $\hat{K}_d$ estima la densidad de distancias bilaterales entre establecimientos del sector, evaluando si la distribución empírica de esas distancias difiere significativamente de una distribución de referencia aleatoria (Duranton y Overman, 2005). Formalmente:
@@ -560,7 +594,7 @@ autoplot(M_result) +
 
 La función $M$ complementa y refina el diagnóstico obtenido con $\hat{K}_d$. Los resultados muestran que $M(r) > 1$ para distancias cortas, confirmando que en ese rango una empresa del sector tiene en su vecindario una proporción de establecimientos del mismo sector significativamente mayor a la que predice la composición de la economía general de Cali — resultado robusto porque, a diferencia del $LQ_i$, no depende de la partición en barrios ni de la masa económica de cada unidad espacial. La magnitud de $M(r)$ en ese umbral puede interpretarse directamente: un valor de, por ejemplo, $M(r) = 2$ indicaría que una empresa del sector encuentra el doble de vecinos del mismo tipo que los esperados bajo localización aleatoria, lo que constituye evidencia de externalidades de aglomeración operando a esa escala. En conjunto, $\hat{K}_d$ y $M$ ofrecen unacaracterización espacialmente continua y libre del *MAUP* que es consistente con todos los indicadores estimados previamente.
 
-En consecuencia al analisis previo, el sector de fabricación de insumos intermedios para construcción en Cali exhibe aglomeración local de corto alcance en la zona central de la ciudad, impulsada por encadenamientos productivos y externalidades informacionales, Asimismo, posee una probabilidad mayor de encontrar dos pares de empresas en una menor distancia relativa a la economía general. Por otro lado, se encuentra que las decisiones de co-localización están incentivadas a sectores con una mayor participación economica del sector, sin embargo, no existe evidencia suficiente para una estructura de especialización sectorial propia en un barrio especifico diferente a la distribucion de especialización productiva dada en la ciudad de Cali.
+En consecuencia al analisis previo, el sector de fabricación de insumos intermedios para construcción en Cali exhibe aglomeración local de corto alcance en la zona central de la ciudad, impulsada por encadenamientos productivos y externalidades informacionales, Asimismo, posee una probabilidad mayor de encontrar dos pares de empresas en una menor distancia relativa a la economía general. Por otro lado, se encuentra que las decisiones de co-localización están incentivadas a barrios con una mayor participación economica del sector, sin embargo, no existe evidencia suficiente para una estructura de especialización sectorial propia en un barrio especifico diferente a la distribucion de especialización productiva dada en la ciudad de Cali.
 
 
 ## Referencias
@@ -574,6 +608,5 @@ Hirschman, A. O. (1945). *National power and the structure of foreign trade*. Un
 
 
 Marcon, E., y Puech, F. (2010). Measures of the geographic concentration of industries: Improving distance-based methods. *Journal of Economic Geography*, *10*(5), 745–762. https://doi.org/10.1093/jeg/lbp056
-
 
 Maurel, F., y Sédillot, B. (1999). A measure of the geographic concentration in French manufacturing industries. *Regional Science and Urban Economics*, *29*(5), 575–604. https://doi.org/10.1016/S0166-0462(99)00020-4
